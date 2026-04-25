@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI Tracker — Instructor Pilates (Offline)</title>
+  <style>
+    :root{--bg:#0b1220;--card:#121b2e;--muted:#94a3b8;--text:#e5e7eb;--border:#23304a;--pri:#38bdf8;--ok:#22c55e;--bad:#ef4444;--vio:#8b5cf6;}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
+    header{padding:16px 16px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,18,32,.92);backdrop-filter:blur(6px);z-index:10}
+    h1{margin:0;font-size:18px;color:var(--pri)}
+    .sub{margin:4px 0 0;color:var(--muted);font-size:12px;line-height:1.35}
+    main{max-width:1200px;margin:0 auto;padding:14px 16px 44px}
+
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 14px}
+    .tab{border:1px solid var(--border);background:transparent;color:var(--text);padding:8px 10px;border-radius:10px;cursor:pointer;font-weight:800;font-size:12px}
+    .tab[aria-selected="true"]{background:linear-gradient(135deg, rgba(56,189,248,.22), rgba(139,92,246,.16));border-color:rgba(56,189,248,.55)}
+
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:12px}
+    .card h2{margin:0 0 10px;font-size:13px;color:#cfe9ff}
+    .hint{margin:-6px 0 10px;color:var(--muted);font-size:11px}
+
+    .grid{display:grid;gap:10px}
+    .cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .cols-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}
+    @media (max-width:900px){.cols-4{grid-template-columns:repeat(2,minmax(0,1fr))}.cols-3{grid-template-columns:repeat(1,minmax(0,1fr))}.cols-2{grid-template-columns:repeat(1,minmax(0,1fr))}}
+
+    label{display:block;font-size:11px;color:var(--muted);margin:0 0 5px}
+    input,select,textarea{width:100%;padding:9px 10px;border-radius:10px;border:1px solid #2a3a59;background:#0b1220;color:var(--text);outline:none}
+    input:focus,select:focus,textarea:focus{border-color:rgba(56,189,248,.75)}
+    textarea{min-height:88px;resize:vertical}
+
+    .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    button{border:0;border-radius:10px;padding:10px 12px;font-weight:900;font-size:12px;cursor:pointer}
+    .b-ok{background:var(--ok);color:white}
+    .b-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+    .b-bad{background:var(--bad);color:white}
+    .b-vio{background:var(--vio);color:white}
+
+    .kpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+    @media (max-width:900px){.kpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .k{background:linear-gradient(135deg, rgba(56,189,248,.18), rgba(139,92,246,.12));border:1px solid rgba(56,189,248,.25);border-radius:14px;padding:12px}
+    .k .t{font-size:11px;color:#cfe9ff}
+    .k .v{font-size:16px;font-weight:1000;margin-top:6px}
+
+    .table-wrap{border:1px solid var(--border);border-radius:14px;overflow:auto;max-height:420px}
+    table{width:100%;border-collapse:collapse;font-size:12px;min-width:980px}
+    thead th{position:sticky;top:0;background:#162241;border-bottom:1px solid var(--border);padding:8px;text-align:left;color:#cfe9ff;white-space:nowrap}
+    tbody td{padding:8px;border-bottom:1px solid #14203a;vertical-align:top;white-space:nowrap}
+    tbody tr:nth-child(even){background:#0f1830}
+
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;border:1px solid rgba(148,163,184,.35);color:#dbeafe;font-size:11px;margin-right:6px}
+    .mini{font-size:11px;color:var(--muted)}
+
+    .chart{height:230px;background:#0b1220;border:1px dashed #2a3a59;border-radius:14px;overflow:hidden}
+    .chart svg{width:100%;height:100%}
+
+    .foot{margin-top:14px;color:var(--muted);font-size:11px;line-height:1.4}
+  </style>
+</head>
+<body>
+<header>
+  <h1>KPI Tracker — Fulltime Instructor Pilates (Offline)</h1>
+  <div class="sub">Japan Fitness Indonesia • Daily entry seperti spreadsheet • Rekap: bulanan / 3 bulan / 6 bulan / 1 tahun • Semua data tersimpan lokal (offline).</div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-entry" role="tab" aria-selected="true" onclick="showTab('entry')">Daily Entry</button>
+    <button class="tab" id="tab-recap" role="tab" aria-selected="false" onclick="showTab('recap')">Recap & Dashboard</button>
+    <button class="tab" id="tab-data" role="tab" aria-selected="false" onclick="showTab('data')">Spreadsheet Data</button>
+    <button class="tab" id="tab-settings" role="tab" aria-selected="false" onclick="showTab('settings')">Settings</button>
+  </div>
+</header>
+
+<main>
+  <section id="view-entry">
+    <div class="row">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>1) Info Harian</h2>
+        <div class="grid cols-3">
+          <div>
+            <label>Tanggal</label>
+            <input type="date" id="date" />
+          </div>
+          <div>
+            <label>Lokasi / Studio</label>
+            <input id="studio" placeholder="contoh: JFI Senayan" />
+          </div>
+          <div>
+            <label>Shift</label>
+            <select id="shift">
+              <option value="">-</option>
+              <option>Opening</option>
+              <option>Middle</option>
+              <option>Closing</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <label>Catatan umum (ops / issue / highlight)</label>
+          <textarea id="notes" placeholder="contoh: alat kurang, kelas full, follow up member..." ></textarea>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>2) Instructor — Mengajar Kelas</h2>
+        <div class="hint">Isi total kelas yang kamu handle hari itu.</div>
+        <div class="grid cols-4">
+          <div><label>Group Class (jumlah kelas)</label><input type="number" min="0" id="teachGroup" value="0" /></div>
+          <div><label>Private Class (jumlah sesi)</label><input type="number" min="0" id="teachPrivate" value="0" /></div>
+          <div><label>Duo Private (jumlah sesi)</label><input type="number" min="0" id="teachDuo" value="0" /></div>
+          <div><label>Total Jam Mengajar</label><input type="number" min="0" step="0.5" id="teachHours" value="0" /></div>
+        </div>
+        <div style="margin-top:10px" class="grid cols-2">
+          <div><label>Attendance total (orang)</label><input type="number" min="0" id="attendance" value="0" /></div>
+          <div><label>Client feedback / incident</label><input id="teachIssue" placeholder="opsional" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>3) Sales — Tambah transaksi per kelas (itemized)</h2>
+        <div class="hint">Tambahkan 1 per 1 transaksi di hari itu. Pilih class type, category (Trial / New / Renewal), paket, qty, dan harga. Sistem akan mengelompokkan otomatis di rekap.</div>
+
+        <div class="grid cols-3">
+          <div>
+            <label>Class Type</label>
+            <select id="saleClassType">
+              <option value="group">Group</option>
+              <option value="private">Private</option>
+              <option value="duo">Duo Private</option>
+            </select>
+          </div>
+          <div>
+            <label>Private subtype (jika private)</label>
+            <select id="salePrivateSubtype">
+              <option value="standard">Standard</option>
+              <option value="advanced">Advanced</option>
+              <option value="full">Full equipment</option>
+            </select>
+          </div>
+          <div>
+            <label>Category</label>
+            <select id="saleCategory">
+              <option value="trial">Trial</option>
+              <option value="new">New Member</option>
+              <option value="renewal">Renewal</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid cols-3" style="margin-top:10px">
+          <div><label>Paket / Keterangan</label><input id="salePackage" placeholder="contoh: 8x / 10x / Trial 1x" /></div>
+          <div><label>Qty</label><input type="number" min="1" id="saleQty" value="1" /></div>
+          <div><label>Price (IDR)</label><input type="number" min="0" id="salePrice" value="0" /></div>
+        </div>
+
+        <div style="margin-top:10px" class="btns">
+          <button class="b-ok" onclick="addSaleLine()">Tambah Sale</button>
+          <button class="b-ghost" onclick="clearSaleInputs()">Reset</button>
+        </div>
+
+        <div style="margin-top:12px" class="table-wrap">
+          <table>
+            <thead><tr><th>Class</th><th>Subtype</th><th>Category</th><th>Paket</th><th>Qty</th><th>Price</th><th>Subtotal</th><th></th></tr></thead>
+            <tbody id="saleLinesBody"></tbody>
+          </table>
+        </div>
+
+        <div style="margin-top:12px" class="k">
+          <div class="t">Total Revenue (hari ini)</div>
+          <div class="v" id="todayTotalRev">Rp 0</div>
+          <div class="mini">Total dihitung dari semua sale lines yang ditambahkan.</div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>4) Self Practice (Harian)</h2>
+        <div class="hint">Catat latihan pribadi untuk progress skill & conditioning.</div>
+        <div class="grid cols-4">
+          <div><label>Mat (menit)</label><input type="number" min="0" id="spMatMin" value="0" /></div>
+          <div><label>Reformer (menit)</label><input type="number" min="0" id="spReformerMin" value="0" /></div>
+          <div><label>Chair (menit)</label><input type="number" min="0" id="spChairMin" value="0" /></div>
+          <div><label>Cadillac/Tower (menit)</label><input type="number" min="0" id="spCadillacMin" value="0" /></div>
+        </div>
+        <div style="margin-top:10px" class="grid cols-2">
+          <div><label>Fokus latihan</label><input id="spFocus" placeholder="contoh: footwork, teaser, scapula..." /></div>
+          <div><label>RPE (1-10)</label><input type="number" min="1" max="10" id="spRpe" value="5" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>5) Operational (Harian)</h2>
+        <div class="hint">Checklist tugas operasional & service.</div>
+        <div class="grid cols-3">
+          <div><label>Closing checklist selesai?</label>
+            <select id="opClosing"><option value="">-</option><option value="yes">Yes</option><option value="no">No</option></select>
+          </div>
+          <div><label>Equipment check</label>
+            <select id="opEquipment"><option value="">-</option><option value="ok">OK</option><option value="issue">Issue</option></select>
+          </div>
+          <div><label>Customer service follow-up (jumlah)</label>
+            <input type="number" min="0" id="opFollowUp" value="0" />
+          </div>
+        </div>
+        <div style="margin-top:10px"><label>Catatan operasional</label><textarea id="opNotes" placeholder="contoh: reformer #3 butuh maintenance..." ></textarea></div>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>6) Academy / Training Progress</h2>
+        <div class="hint">Track perjalanan: Basic → Ujian → Advanced.</div>
+        <div class="grid cols-3">
+          <div><label>Status Basic</label>
+            <select id="acBasic"><option value="">-</option><option>Not started</option><option>In progress</option><option>Completed</option></select>
+          </div>
+          <div><label>Ujian</label>
+            <select id="acExam"><option value="">-</option><option>Not yet</option><option>Scheduled</option><option>Passed</option><option>Failed</option></select>
+          </div>
+          <div><label>Status Advanced</label>
+            <select id="acAdvanced"><option value="">-</option><option>Not started</option><option>In progress</option><option>Completed</option></select>
+          </div>
+        </div>
+        <div style="margin-top:10px" class="grid cols-2">
+          <div><label>Jam Academy hari ini</label><input type="number" min="0" step="0.5" id="acHours" value="0" /></div>
+          <div><label>Materi / fokus</label><input id="acFocus" placeholder="contoh: anatomy, cueing, programming" /></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <h2>7) Simpan Entry Harian</h2>
+      <div class="btns">
+        <button class="b-ok" onclick="saveEntry()">Simpan</button>
+        <button class="b-ghost" onclick="resetEntry()">Reset Form</button>
+        <button class="b-vio" onclick="duplicateYesterday()">Copy kemarin</button>
+      </div>
+      <div class="foot">Tips: Buka file ini via browser (Chrome/Edge). Offline tetap jalan. Untuk pindah device, gunakan Export/Import di Settings.</div>
+    </div>
+  </section>
+
+  <!-- RECAP TAB -->
+  <section id="view-recap" style="display:none">
+    <div class="row">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>Filter Rekap</h2>
+        <div class="grid cols-3">
+          <div>
+            <label>Periode</label>
+            <select id="period" onchange="renderRecap()">
+              <option value="month">Bulanan</option>
+              <option value="quarter">3 Bulan</option>
+              <option value="half">6 Bulan</option>
+              <option value="year">1 Tahun</option>
+            </select>
+          </div>
+          <div>
+            <label>Tahun</label>
+            <select id="year" onchange="renderRecap()"></select>
+          </div>
+          <div>
+            <label>Mulai (untuk 3/6/1 tahun)</label>
+            <select id="startMonth" onchange="renderRecap()"></select>
+          </div>
+        </div>
+        <div class="foot">Bulanan: otomatis pakai startMonth sebagai bulan yang direkap. 3/6/1 tahun: startMonth = bulan awal.</div>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>Ringkasan Revenue</h2>
+        <div class="kpi">
+          <div class="k"><div class="t">Total Revenue</div><div class="v" id="kTotalRev">Rp 0</div></div>
+          <div class="k"><div class="t">Trial Revenue</div><div class="v" id="kTrialRev">Rp 0</div></div>
+          <div class="k"><div class="t">New-from-Trial Revenue</div><div class="v" id="kNewRev">Rp 0</div></div>
+          <div class="k"><div class="t">Renewal Revenue</div><div class="v" id="kRenewRev">Rp 0</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>Ringkasan Aktivitas</h2>
+        <div class="kpi">
+          <div class="k"><div class="t">Kelas diajar (total)</div><div class="v" id="kTeachTotal">0</div></div>
+          <div class="k"><div class="t">Attendance (total)</div><div class="v" id="kAttend">0</div></div>
+          <div class="k"><div class="t">Self practice (menit)</div><div class="v" id="kSPMin">0</div></div>
+          <div class="k"><div class="t">Jam academy</div><div class="v" id="kAcH">0</div></div>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>Trend Revenue (sederhana)</h2>
+        <div class="hint">Grafik garis: total revenue per hari dalam periode.</div>
+        <div class="chart" id="chart"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <h2>Breakdown Sales (Count)</h2>
+      <div class="table-wrap" style="max-height:320px">
+        <table>
+          <thead>
+            <tr>
+              <th>Kategori</th><th>Group</th><th>Private</th><th>Duo</th>
+            </tr>
+          </thead>
+          <tbody id="salesCountBody"></tbody>
+        </table>
+      </div>
+      <div class="foot">Catatan: revenue ditampilkan di kartu ringkasan; breakdown revenue detail ada di Spreadsheet Data.</div>
+    </div>
+  </section>
+
+  <!-- DATA TAB -->
+  <section id="view-data" style="display:none">
+    <div class="card">
+      <h2>Spreadsheet Data (Daily Rows)</h2>
+      <div class="hint">Ini seperti spreadsheet: tiap baris = 1 hari. Bisa export CSV untuk presentasi / laporan.</div>
+      <div class="btns">
+        <button class="b-vio" onclick="exportCSV()">Export CSV</button>
+        <button class="b-ghost" onclick="exportJSON()">Export JSON (backup)</button>
+      </div>
+      <div class="table-wrap" style="margin-top:10px">
+        <table>
+          <thead id="dataHead"></thead>
+          <tbody id="dataBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS TAB -->
+  <section id="view-settings" style="display:none">
+    <div class="row">
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>Backup / Pindah Device</h2>
+        <div class="hint">Export JSON untuk backup. Import JSON untuk restore.</div>
+        <div class="btns">
+          <button class="b-ghost" onclick="exportJSON()">Export JSON</button>
+          <label style="display:inline-block">
+            <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importJSON(event)" />
+            <button class="b-ok" type="button" onclick="document.getElementById('importFile').click()">Import JSON</button>
+          </label>
+        </div>
+      </div>
+
+      <div class="card" style="flex:1;min-width:320px">
+        <h2>Danger Zone</h2>
+        <div class="hint">Hapus semua data lokal di device ini.</div>
+        <div class="btns">
+          <button class="b-bad" onclick="wipeAll()">Wipe All Data</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:10px">
+      <h2>Offline Info</h2>
+      <div class="foot">File ini 100% offline (tidak pakai internet/CDN). Data disimpan di <span class="pill">localStorage</span>. Kalau browser di-reset total, data ikut hilang — makanya rutin Export JSON.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const DB_KEY = 'kpi_tracker_jfi_v1';
+
+  const FIELDS = [
+    'date','studio','shift','notes',
+    'teachGroup','teachPrivate','teachDuo','teachHours','attendance','teachIssue',
+
+    'trialGroupCount','trialPrivateCount','trialDuoCount','trialGroupRev','trialPrivateRev','trialDuoRev','trialGroupPkg','trialPrivatePkg','trialDuoPkg',
+    'newFromTrialGroupCount','newFromTrialPrivateCount','newFromTrialDuoCount','newFromTrialGroupRev','newFromTrialPrivateRev','newFromTrialDuoRev','newFromTrialGroupPkg','newFromTrialPrivatePkg','newFromTrialDuoPkg',
+    'renewalGroupCount','renewalPrivateCount','renewalDuoCount','renewalGroupRev','renewalPrivateRev','renewalDuoRev','renewalGroupPkg','renewalPrivatePkg','renewalDuoPkg',
+
+    'spMatMin','spReformerMin','spChairMin','spCadillacMin','spFocus','spRpe',
+
+    'opClosing','opEquipment','opFollowUp','opNotes',
+
+    'acBasic','acExam','acAdvanced','acHours','acFocus'
+  ];
+
+  const MONEY_FIELDS = [
+    'trialGroupRev','trialPrivateRev','trialDuoRev',
+    'newFromTrialGroupRev','newFromTrialPrivateRev','newFromTrialDuoRev',
+    'renewalGroupRev','renewalPrivateRev','renewalDuoRev'
+  ];
+
+  function $(id){ return document.getElementById(id); }
+  function n(v){ const x = Number(v); return Number.isFinite(x) ? x : 0; }
+  function fmtIDR(v){ return 'Rp ' + Math.round(n(v)).toLocaleString('id-ID'); }
+
+  function todayISO(){
+    const d = new Date();
+    const tz = d.getTimezoneOffset();
+    const local = new Date(d.getTime() - tz*60000);
+    return local.toISOString().slice(0,10);
+  }
+
+  function showTab(name){
+    const views = ['entry','recap','data','settings'];
+    for(const v of views){
+      $('view-'+v).style.display = (v===name) ? 'block' : 'none';
+      const t = $('tab-'+v);
+      if(t) t.setAttribute('aria-selected', v===name ? 'true' : 'false');
+    }
+    if(name==='recap') renderRecap();
+    if(name==='data') renderDataTable();
+  }
+
+  function loadDB(){
+    try{ return JSON.parse(localStorage.getItem(DB_KEY) || '[]'); }
+    catch{ return []; }
+  }
+  function saveDB(rows){ localStorage.setItem(DB_KEY, JSON.stringify(rows)); }
+
+  // saleLines array keeps today's itemized sales before saving
+  let saleLines = [];
+
+  function computeTodayTotalRev(){
+    const totalFromLines = saleLines.reduce((s,l)=> s + n(l.subtotal), 0);
+    const totalFromFields = MONEY_FIELDS.reduce((s,f)=>{
+      const el = $(f); return s + (el ? n(el.value) : 0);
+    }, 0);
+    const total = totalFromLines + totalFromFields;
+    $('todayTotalRev').textContent = fmtIDR(total);
+  }
+
+  function addSaleLine(){
+    const ct = $('saleClassType').value;
+    const subtype = $('salePrivateSubtype').value;
+    const cat = $('saleCategory').value;
+    const pkg = $('salePackage').value || '';
+    const qty = Math.max(1, n($('saleQty').value));
+    const price = n($('salePrice').value);
+    const subtotal = qty * price;
+    saleLines.push({classType:ct, subtype:subtype, category:cat, pkg:pkg, qty:qty, price:price, subtotal:subtotal});
+    renderSaleLines();
+    computeTodayTotalRev();
+  }
+
+  function renderSaleLines(){
+    const body = $('saleLinesBody');
+    if(!body) return;
+    body.innerHTML = saleLines.map((l,i)=>`<tr><td>${l.classType}</td><td>${l.subtype||''}</td><td>${l.category}</td><td>${l.pkg||''}</td><td>${l.qty}</td><td>${fmtIDR(l.price)}</td><td>${fmtIDR(l.subtotal)}</td><td><button class="b-bad" onclick="deleteSaleLine(${i})">Del</button></td></tr>`).join('');
+  }
+
+  function deleteSaleLine(i){
+    saleLines.splice(i,1);
+    renderSaleLines();
+    computeTodayTotalRev();
+  }
+
+  function clearSaleInputs(){
+    $('salePackage').value='';
+    $('saleQty').value=1;
+    $('salePrice').value=0;
+    $('salePrivateSubtype').value='standard';
+    $('saleClassType').value='group';
+    $('saleCategory').value='trial';
+  }
+
+  function wireRevenueAuto(){
+    for(const f of MONEY_FIELDS){
+      const el = $(f);
+      if(el) el.addEventListener('input', computeTodayTotalRev);
+    }
+  }
+
+  function readForm(){
+    const row = {};
+    for(const f of FIELDS){
+      const el = $(f);
+      if(!el) continue;
+      if(el.type==='number') row[f] = n(el.value);
+      else row[f] = (el.value || '').trim();
+    }
+    // attach current saleLines (copy)
+    row.saleLines = saleLines.map(s=>Object.assign({},s));
+    // compute totalRevenue from saleLines + legacy money fields
+    const totalFromLines = row.saleLines.reduce((s,l)=> s + n(l.subtotal), 0);
+    const totalFromFields = MONEY_FIELDS.reduce((s,f)=> s + n(row[f]), 0);
+    row.totalRevenue = totalFromLines + totalFromFields;
+    row.createdAt = new Date().toISOString();
+    return row;
+  }
+
+  function resetEntry(){
+    for(const f of FIELDS){
+      const el = $(f);
+      if(!el) continue;
+      if(el.type==='number') el.value = 0;
+      else if(el.tagName==='SELECT') el.value = '';
+      else el.value = '';
+    }
+    $('date').value = todayISO();
+    $('spRpe').value = 5;
+    computeTodayTotalRev();
+  }
+
+  function saveEntry(){
+    const row = readForm();
+    if(!row.date){ alert('Tanggal wajib diisi.'); return; }
+    const db = loadDB();
+    const idx = db.findIndex(r => r.date === row.date);
+    if(idx>=0){
+      if(!confirm('Tanggal ini sudah ada. Update/overwrite data hari itu?')) return;
+      db[idx] = row;
+    } else {
+      db.push(row);
+    }
+    db.sort((a,b)=> a.date.localeCompare(b.date));
+    saveDB(db);
+    alert('Tersimpan.');
+  }
+
+  function duplicateYesterday(){
+    const db = loadDB();
+    const today = $('date').value || todayISO();
+    const d = new Date(today+'T00:00:00');
+    d.setDate(d.getDate()-1);
+    const y = d.toISOString().slice(0,10);
+    const row = db.find(r=>r.date===y);
+    if(!row){ alert('Data kemarin tidak ditemukan.'); return; }
+    for(const f of FIELDS){
+      if(f==='date') continue;
+      const el = $(f);
+      if(!el) continue;
+      if(el.type==='number') el.value = n(row[f]);
+      else el.value = row[f] || '';
+    }
+    computeTodayTotalRev();
+  }
+
+  function periodRange(){
+    const period = $('period').value;
+    const year = Number($('year').value);
+    const startMonth = Number($('startMonth').value); // 1-12
+    let months = 1;
+    if(period==='quarter') months = 3;
+    else if(period==='half') months = 6;
+    else if(period==='year') months = 12;
+
+    const start = new Date(Date.UTC(year, startMonth-1, 1));
+    const end = new Date(Date.UTC(year, startMonth-1 + months, 1));
+    return { startISO: start.toISOString().slice(0,10), endISO: end.toISOString().slice(0,10) };
+  }
+
+  function inRange(row, startISO, endISO){
+    return row.date >= startISO && row.date < endISO;
+  }
+
+  function sum(rows, field){ return rows.reduce((s,r)=> s + n(r[field]), 0); }
+
+  function renderRecap(){
+    const db = loadDB();
+    const {startISO, endISO} = periodRange();
+    const rows = db.filter(r => inRange(r, startISO, endISO));
+
+    const trialRev = sum(rows,'trialGroupRev') + sum(rows,'trialPrivateRev') + sum(rows,'trialDuoRev');
+    const newRev   = sum(rows,'newFromTrialGroupRev') + sum(rows,'newFromTrialPrivateRev') + sum(rows,'newFromTrialDuoRev');
+    const renRev   = sum(rows,'renewalGroupRev') + sum(rows,'renewalPrivateRev') + sum(rows,'renewalDuoRev');
+    const totalRev = trialRev + newRev + renRev;
+
+    $('kTrialRev').textContent = fmtIDR(trialRev);
+    $('kNewRev').textContent   = fmtIDR(newRev);
+    $('kRenewRev').textContent = fmtIDR(renRev);
+    $('kTotalRev').textContent = fmtIDR(totalRev);
+
+    const teachTotal = sum(rows,'teachGroup') + sum(rows,'teachPrivate') + sum(rows,'teachDuo');
+    $('kTeachTotal').textContent = String(teachTotal);
+    $('kAttend').textContent = String(sum(rows,'attendance'));
+    $('kSPMin').textContent = String(sum(rows,'spMatMin')+sum(rows,'spReformerMin')+sum(rows,'spChairMin')+sum(rows,'spCadillacMin'));
+    $('kAcH').textContent = String(sum(rows,'acHours'));
+
+    // Sales counts breakdown
+    const c = {
+      trial: [sum(rows,'trialGroupCount'), sum(rows,'trialPrivateCount'), sum(rows,'trialDuoCount')],
+      newf:  [sum(rows,'newFromTrialGroupCount'), sum(rows,'newFromTrialPrivateCount'), sum(rows,'newFromTrialDuoCount')],
+      ren:   [sum(rows,'renewalGroupCount'), sum(rows,'renewalPrivateCount'), sum(rows,'renewalDuoCount')]
+    };
+    const body = $('salesCountBody');
+    body.innerHTML = [
+      ['Trial', c.trial],
+      ['New Member dari Trial', c.newf],
+      ['Renewal', c.ren]
+    ].map(([label,arr])=>`<tr><td>${label}</td><td>${arr[0]}</td><td>${arr[1]}</td><td>${arr[2]}</td></tr>`).join('');
+
+    renderLineChart(rows);
+  }
+
+  function renderLineChart(rows){
+    const el = $('chart');
+    if(!rows.length){
+      el.innerHTML = '<div class="mini" style="padding:12px">Belum ada data pada periode ini.</div>';
+      return;
+    }
+    const pts = rows.map(r=>({
+      x:r.date,
+      y: n(r.trialGroupRev)+n(r.trialPrivateRev)+n(r.trialDuoRev)+n(r.newFromTrialGroupRev)+n(r.newFromTrialPrivateRev)+n(r.newFromTrialDuoRev)+n(r.renewalGroupRev)+n(r.renewalPrivateRev)+n(r.renewalDuoRev)
+    }));
+
+    const w = 1000, h = 240, pad = 34;
+    const maxY = Math.max(...pts.map(p=>p.y), 1);
+    const minY = Math.min(...pts.map(p=>p.y), 0);
+    const spanY = Math.max(maxY-minY, 1);
+
+    const xStep = (w - pad*2) / Math.max(pts.length-1, 1);
+    const xy = pts.map((p,i)=>{
+      const x = pad + i*xStep;
+      const y = (h-pad) - ((p.y - minY)/spanY) * (h - pad*2);
+      return {x,y,yv:p.y,lab:p.x};
+    });
+
+    const path = xy.map((p,i)=> (i===0?`M ${p.x} ${p.y}`:`L ${p.x} ${p.y}`)).join(' ');
+    const dots = xy.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="4" fill="rgba(56,189,248,.95)" />`).join('');
+
+    el.innerHTML = `
+      <svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+        <rect x="0" y="0" width="${w}" height="${h}" fill="#0b1220" />
+        <line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="rgba(148,163,184,.25)" />
+        <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="rgba(148,163,184,.25)" />
+        <path d="${path}" fill="none" stroke="rgba(56,189,248,.95)" stroke-width="3" />
+        ${dots}
+      </svg>
+      <div class="mini" style="padding:10px 12px">Range: ${pts[0].x} → ${pts[pts.length-1].x} • Max: ${fmtIDR(maxY)}</div>
+    `;
+  }
+
+  function renderDataTable(){
+    const db = loadDB();
+    const head = $('dataHead');
+    const body = $('dataBody');
+
+    const cols = [
+      'date','studio','shift',
+      'teachGroup','teachPrivate','teachDuo','teachHours','attendance',
+      'trialGroupCount','trialPrivateCount','trialDuoCount','trialGroupRev','trialPrivateRev','trialDuoRev','trialGroupPkg','trialPrivatePkg','trialDuoPkg',
+      'newFromTrialGroupCount','newFromTrialPrivateCount','newFromTrialDuoCount','newFromTrialGroupRev','newFromTrialPrivateRev','newFromTrialDuoRev','newFromTrialGroupPkg','newFromTrialPrivatePkg','newFromTrialDuoPkg',
+      'renewalGroupCount','renewalPrivateCount','renewalDuoCount','renewalGroupRev','renewalPrivateRev','renewalDuoRev','renewalGroupPkg','renewalPrivatePkg','renewalDuoPkg',
+      'spMatMin','spReformerMin','spChairMin','spCadillacMin','acHours','opFollowUp','totalRevenue'
+    ];
+
+    head.innerHTML = '<tr>' + cols.map(c=>`<th>${c}</th>`).join('') + '<th>Actions</th></tr>';
+    body.innerHTML = db.map((r,i)=>{
+      const tds = cols.map(c=>{
+        if(MONEY_FIELDS.includes(c) || c==='totalRevenue') return `<td>${fmtIDR(r[c])}</td>`;
+        return `<td>${(r[c] ?? '')}</td>`;
+      }).join('');
+      return `<tr>${tds}<td><button class="b-bad" style="padding:6px 10px" onclick="deleteRow(${i})">Delete</button></td></tr>`;
+    }).join('');
+  }
+
+  function deleteRow(i){
+    const db = loadDB();
+    if(!confirm('Hapus baris ini?')) return;
+    db.splice(i,1);
+    saveDB(db);
+    renderDataTable();
+  }
+
+  function exportCSV(){
+    const db = loadDB();
+    if(!db.length){ alert('Belum ada data.'); return; }
+
+    const cols = [
+      ...FIELDS,
+      'totalRevenue','createdAt'
+    ];
+
+    const esc = (v)=>{
+      const s = String(v ?? '');
+      const needs = /[\n\r",]/.test(s);
+      const q = '"'+ s.replace(/"/g,'""') +'"';
+      return needs ? q : s;
+    };
+
+    const lines = [];
+    lines.push(cols.join(','));
+    for(const r of db){
+      const row = cols.map(c=> esc(r[c] ?? '')).join(',');
+      lines.push(row);
+    }
+
+    const blob = new Blob([lines.join('\n')], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'kpi_tracker_'+new Date().toISOString().slice(0,10)+'.csv';
+    a.click();
+  }
+
+  function exportJSON(){
+    const db = loadDB();
+    const blob = new Blob([JSON.stringify({version:1, exportedAt:new Date().toISOString(), rows:db}, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'kpi_tracker_backup_'+new Date().toISOString().slice(0,10)+'.json';
+    a.click();
+  }
+
+  function importJSON(ev){
+    const file = ev.target.files && ev.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const obj = JSON.parse(String(reader.result||''));
+        const rows = obj.rows || obj;
+        if(!Array.isArray(rows)) throw new Error('Format tidak sesuai');
+        if(!confirm('Import akan overwrite data lokal sekarang. Lanjut?')) return;
+        saveDB(rows);
+        alert('Import sukses.');
+      }catch(e){
+        alert('Gagal import: '+e.message);
+      }
+    };
+    reader.readAsText(file);
+    ev.target.value='';
+  }
+
+  function wipeAll(){
+    if(!confirm('Yakin hapus SEMUA data?')) return;
+    localStorage.removeItem(DB_KEY);
+    alert('Data dihapus.');
+  }
+
+  function seedSelectors(){
+    const yearSel = $('year');
+    const mSel = $('startMonth');
+    const now = new Date();
+    const yNow = now.getFullYear();
+    const years = [yNow-1, yNow, yNow+1];
+    yearSel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+
+    const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+    mSel.innerHTML = months.map((m,i)=>`<option value="${i+1}">${i+1} - ${m}</option>`).join('');
+
+    yearSel.value = String(yNow);
+    mSel.value = String(now.getMonth()+1);
+  }
+
+  // init
+  $('date').value = todayISO();
+  seedSelectors();
+  wireRevenueAuto();
+  computeTodayTotalRev();
+</script>
+</body>
+</html>
